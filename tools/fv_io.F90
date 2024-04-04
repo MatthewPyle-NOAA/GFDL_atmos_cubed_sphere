@@ -94,11 +94,11 @@ module fv_io_mod
                                      variable_exists, read_data, set_filename_appendix, get_dimension_size
   use mpp_mod,                 only: mpp_error, FATAL, NOTE, WARNING, mpp_root_pe, &
                                      mpp_sync, mpp_pe, mpp_declare_pelist, mpp_get_current_pelist, &
-                                     mpp_npes
+                                     mpp_npes, MPP_COMM_NULL
   use mpp_domains_mod,         only: domain2d, EAST, WEST, NORTH, CENTER, SOUTH, CORNER, &
                                      mpp_get_compute_domain, mpp_get_data_domain, &
                                      mpp_get_layout, mpp_get_ntile_count, mpp_copy_domain, &
-                                     mpp_get_global_domain, mpp_get_tile_comm, mpp_define_io_domain, mpp_set_tile_comm
+                                     mpp_get_global_domain, mpp_get_domain_tile_commid, mpp_define_io_domain
   use tracer_manager_mod,      only: tr_get_tracer_names=>get_tracer_names, &
                                      get_tracer_names, get_number_tracers, &
                                      set_tracer_profile, &
@@ -424,7 +424,6 @@ contains
 
   !>@brief Write the fv core restart quantities
   subroutine  fv_io_read_restart(fv_domain,Atm)
-    use mpi, only: MPI_COMM_NULL
     type(domain2d),      intent(inout) :: fv_domain
     type(fv_atmos_type), intent(inout) :: Atm(:)
 
@@ -454,7 +453,7 @@ contains
       call close_file(Atm(1)%Fv_restart)
       Atm(1)%Fv_restart_is_open = .false.
     endif
-    deallocate(pes)
+    !deallocate(pes)
 
     if (Atm(1)%flagstruct%external_eta) then
        call set_external_eta(Atm(1)%ak, Atm(1)%bk, Atm(1)%ptop, Atm(1)%ks)
@@ -473,13 +472,12 @@ contains
 
     fname = 'INPUT/fv_core.res'//trim(suffix)//'.nc'
 #ifdef ENABLE_PARALLELRESTART
+    Atm(1)%Fv_restart_tile%use_collective = .true.
+
     call mpp_get_layout(Atm(1)%domain,read_layout)
     call mpp_copy_domain(Atm(1)%domain, domain_for_read)
     call mpp_define_io_domain(domain_for_read, read_layout)
-    call mpp_set_tile_comm(domain_for_read)
-
-    Atm(1)%Fv_restart_tile%use_collective = .true.
-    Atm(1)%Fv_restart_tile%TileComm = mpp_get_tile_comm(domain_for_read)
+    Atm(1)%Fv_restart_tile%tile_comm = mpp_get_domain_tile_commid(Atm(1)%domain)
     Atm(1)%Fv_restart_tile_is_open = open_file(Atm(1)%Fv_restart_tile, fname, "read", domain_for_read, is_restart=.true.)
 #else
     Atm(1)%Fv_restart_tile_is_open = open_file(Atm(1)%Fv_restart_tile, fname, "read", fv_domain, is_restart=.true.)
@@ -493,15 +491,14 @@ contains
 #ifdef ENABLE_PARALLELRESTART
     ! Disable use_collective so the reuse of this Fv_restart_tile during checkpointing doesn't fail
     Atm(1)%Fv_restart_tile%use_collective = .false.
-    Atm(1)%Fv_restart_tile%TileComm = MPI_COMM_NULL
+    Atm(1)%Fv_restart_tile%tile_comm = MPP_COMM_NULL
 #endif
-    
 
 !--- restore data for fv_tracer - if it exists
     fname = 'INPUT/fv_tracer.res'//trim(suffix)//'.nc'
 #ifdef ENABLE_PARALLELRESTART
     Atm(1)%Tra_restart%use_collective = .true.
-    Atm(1)%Tra_restart%TileComm = mpp_get_tile_comm(domain_for_read)
+    Atm(1)%Tra_restart%tile_comm = mpp_get_domain_tile_commid(Atm(1)%domain)
     Atm(1)%Tra_restart_is_open = open_file(Atm(1)%Tra_restart, fname, "read", domain_for_read, is_restart=.true.)
 #else
     Atm(1)%Tra_restart_is_open = open_file(Atm(1)%Tra_restart, fname, "read", fv_domain, is_restart=.true.)
@@ -517,6 +514,7 @@ contains
 #ifdef ENABLE_PARALLELRESTART
     ! Disable use_collective so the reuse of this Tra_restart during checkpointing doesn't fail
     Atm(1)%Tra_restart%use_collective = .false.
+    Atm(1)%Fv_restart_tile%tile_comm = MPP_COMM_NULL
 #endif
 
 !--- restore data for surface winds - if it exists
@@ -558,6 +556,7 @@ contains
          endif
     endif
 
+    deallocate(pes)
     return
 
   end subroutine  fv_io_read_restart

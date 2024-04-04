@@ -154,8 +154,8 @@ module external_ic_mod
    use mpp_mod,            only: mpp_error, FATAL, NOTE, mpp_pe, mpp_root_pe
    use mpp_mod,            only: stdlog, input_nml_file, mpp_npes, mpp_get_current_pelist
    use mpp_parameter_mod,  only: AGRID_PARAM=>AGRID
-   use mpp_domains_mod,    only: mpp_get_tile_id, domain2d, mpp_update_domains, NORTH, EAST, mpp_get_tile_comm, &
-                                 mpp_get_io_domain_layout, mpp_copy_domain, mpp_define_io_domain, mpp_get_layout, mpp_set_tile_comm
+   use mpp_domains_mod,    only: mpp_get_tile_id, domain2d, mpp_update_domains, NORTH, EAST, mpp_get_domain_tile_commid, &
+                                 mpp_get_io_domain_layout, mpp_copy_domain, mpp_define_io_domain, mpp_get_layout
    use tracer_manager_mod, only: get_tracer_names, get_number_tracers, get_tracer_index
    use tracer_manager_mod, only: set_tracer_profile
    use field_manager_mod,  only: MODEL_ATMOS
@@ -923,10 +923,9 @@ contains
         call mpp_get_layout(Atm%domain,read_layout)
         call mpp_copy_domain(Atm%domain, domain_for_read)
         call mpp_define_io_domain(domain_for_read, read_layout)
-        call mpp_set_tile_comm(domain_for_read)
 
         GFS_restart%use_collective = .true.
-        GFS_restart%TileComm = mpp_get_tile_comm(domain_for_read)
+        GFS_restart%tile_comm = mpp_get_domain_tile_commid(Atm%domain)
         if( open_file(GFS_restart, fn_gfs_ics, "read", domain_for_read, is_restart=.true., dont_add_res_to_filename=.true.) ) then
 #else
         if( open_file(GFS_restart, fn_gfs_ics, "read", Atm%domain_for_read, is_restart=.true., dont_add_res_to_filename=.true.) ) then
