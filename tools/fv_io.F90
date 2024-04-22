@@ -94,11 +94,19 @@ module fv_io_mod
                                      variable_exists, read_data, set_filename_appendix, get_dimension_size
   use mpp_mod,                 only: mpp_error, FATAL, NOTE, WARNING, mpp_root_pe, &
                                      mpp_sync, mpp_pe, mpp_declare_pelist, mpp_get_current_pelist, &
+#ifdef ENABLE_PARALLELRESTART
                                      mpp_npes, MPP_COMM_NULL
+#else
+                                     mpp_npes
+#endif
   use mpp_domains_mod,         only: domain2d, EAST, WEST, NORTH, CENTER, SOUTH, CORNER, &
                                      mpp_get_compute_domain, mpp_get_data_domain, &
                                      mpp_get_layout, mpp_get_ntile_count, mpp_copy_domain, &
+#ifdef ENABLE_PARALLELRESTART
                                      mpp_get_global_domain, mpp_get_domain_tile_commid, mpp_define_io_domain
+#else
+                                     mpp_get_global_domain
+#endif
   use tracer_manager_mod,      only: tr_get_tracer_names=>get_tracer_names, &
                                      get_tracer_names, get_number_tracers, &
                                      set_tracer_profile, &

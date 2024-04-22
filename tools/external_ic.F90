@@ -154,8 +154,17 @@ module external_ic_mod
    use mpp_mod,            only: mpp_error, FATAL, NOTE, mpp_pe, mpp_root_pe
    use mpp_mod,            only: stdlog, input_nml_file, mpp_npes, mpp_get_current_pelist
    use mpp_parameter_mod,  only: AGRID_PARAM=>AGRID
-   use mpp_domains_mod,    only: mpp_get_tile_id, domain2d, mpp_update_domains, NORTH, EAST, mpp_get_domain_tile_commid, &
-                                 mpp_get_io_domain_layout, mpp_copy_domain, mpp_define_io_domain, mpp_get_layout
+#ifdef ENABLE_PARALLELRESTART
+   use mpp_domains_mod,    only: mpp_get_tile_id, domain2d, mpp_update_domains, &
+                                 NORTH, EAST, mpp_get_domain_tile_commid, &
+                                 mpp_get_io_domain_layout, mpp_copy_domain, &
+                                 mpp_define_io_domain, mpp_get_layout
+#else
+   use mpp_domains_mod,    only: mpp_get_tile_id, domain2d, mpp_update_domains, &
+                                 NORTH, EAST, &
+                                 mpp_get_io_domain_layout, mpp_copy_domain, &
+                                 mpp_define_io_domain, mpp_get_layout
+#endif
    use tracer_manager_mod, only: get_tracer_names, get_number_tracers, get_tracer_index
    use tracer_manager_mod, only: set_tracer_profile
    use field_manager_mod,  only: MODEL_ATMOS
